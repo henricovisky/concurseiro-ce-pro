@@ -1,0 +1,50 @@
+name: "🚀 Radar de Editais — Pipeline Diário"
+
+on:
+  # Execução automática: todo dia às 08:00 UTC (05:00 horário de Brasília)
+  schedule:
+    - cron: "0 8 * * *"
+
+  # Execução manual via GitHub UI (para testes e re-execuções)
+  workflow_dispatch:
+    inputs:
+      com_noticias:
+        description: "Incluir extração da página de notícias?"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  pipeline:
+    name: "ETL — Radar de Editais"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: "📥 Checkout do repositório"
+        uses: actions/checkout@v4
+
+      - name: "🐍 Configurar Python 3.11"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: "📦 Instalar dependências"
+        run: pip install -r requirements.txt
+
+      - name: "🚀 Executar Pipeline"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ "${{ github.event.inputs.com_noticias }}" = "true" ]; then
+            python main.py --com-noticias
+          else
+            python main.py
+          fi
