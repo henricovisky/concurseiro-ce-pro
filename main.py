@@ -16,7 +16,7 @@ import sys
 from dotenv import load_dotenv
 
 from src.extractors import rss_concursos
-from src.transformers import filtros_pandas, gemini_nlp
+from src.transformers import filtros_pandas, openrouter_nlp as ai_nlp
 from src.loaders import supabase_client, discord_notifier
 from src.utils.logger_config import get_logger
 
@@ -79,8 +79,8 @@ def executar_pipeline(incluir_noticias: bool = False) -> None:
     logger.info(f"🆕 {len(df_novos)} edital(is) novo(s) para processar.")
 
     # ── ETAPA 4: ENRIQUECIMENTO COM IA ────────────────────────────────────────
-    logger.info("🤖 [T] Enriquecimento: chamando Gemini para extração de entidades...")
-    df_novos = gemini_nlp.enriquecer(df_novos)
+    logger.info("🤖 [T] Enriquecimento: chamando OpenRouter para extração de entidades...")
+    df_novos = ai_nlp.enriquecer(df_novos)
 
     # ── ETAPA 5: CARGA E NOTIFICAÇÃO ──────────────────────────────────────────
     logger.info("💾 [L] Carga: persistindo no Supabase e notificando Discord...")
