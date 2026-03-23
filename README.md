@@ -3,7 +3,7 @@
 [![Pipeline Diário](https://github.com/SEU_USUARIO/concurseiro-ce-pro/actions/workflows/pipeline_diario.yml/badge.svg)](https://github.com/SEU_USUARIO/concurseiro-ce-pro/actions)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Supabase](https://img.shields.io/badge/database-Supabase-green.svg)](https://supabase.com/)
-[![Gemini AI](https://img.shields.io/badge/AI-Gemini_Flash-orange.svg)](https://aistudio.google.com/)
+[![OpenRouter](https://img.shields.io/badge/AI-OpenRouter-blue.svg)](https://openrouter.ai/)
 
 O **Concurseiro CE Pro** é um ecossistema de ferramentas inteligentes projetado para concurseiros do Ceará. Este repositório contém o **Módulo 1: Radar de Editais**, um pipeline ETL (Extract, Transform, Load) serverless que monitora, processa e notifica novos editais de concursos públicos no estado do Ceará de forma 100% automatizada.
 
@@ -13,7 +13,7 @@ O **Concurseiro CE Pro** é um ecossistema de ferramentas inteligentes projetado
 
 O Radar de Editais automatiza as tarefas repetitivas de busca por novas oportunidades:
 - **Extração multi-fonte:** Coleta dados em tempo real do portal PCI Concursos (Ceará e Notícias Gerais).
-- **Inteligência Artificial:** Utiliza o Google Gemini para extrair informações estruturadas (salário, vagas, data de prova) a partir de títulos brutos.
+- **Inteligência Artificial:** Utiliza o OpenRouter (com fallback para múltiplos modelos gratuitos como Llama 3.3, Gemma 3 e Mistral) para extrair informações estruturadas (salário, vagas, data de prova) a partir de títulos brutos.
 - **Idempotência:** Garante que o mesmo edital nunca seja processado ou notificado duas vezes.
 - **Notificação em Tempo Real:** Envia alertas formatados (Rich Embeds) para canais do Discord.
 
@@ -26,7 +26,7 @@ O sistema segue uma arquitetura modular baseada em camadas:
 1.  **Extração (`extractors`):** Scraping HTML resiliente com `requests`, `BeautifulSoup` e `tenacity` (retry/backoff).
 2.  **Transformação (`transformers`):**
     -   **Limpeza:** `pandas` para normalização de dados e tratamento de duplicatas locais.
-    -   **Enriquecimento:** `google-generativeai` (Gemini 1.5 Flash) para extração de entidades via NLP.
+    -   **Enriquecimento:** OpenRouter API para extração de entidades via NLP com suporte a múltiplos modelos.
 3.  **Carga (`loaders`):**
     -   **Banco de Dados:** `supabase-py` (PostgreSQL) para persistência e controle de estado.
     -   **Notificação:** Discord Webhooks para entrega de mensagens.
@@ -39,7 +39,7 @@ O sistema segue uma arquitetura modular baseada em camadas:
 ### Pré-requisitos
 - Python 3.10 ou superior.
 - Uma conta no [Supabase](https://supabase.com/).
-- Uma chave de API no [Google AI Studio](https://aistudio.google.com/).
+- Uma chave de API no [OpenRouter](https://openrouter.ai/).
 - Um Webhook de um canal do Discord.
 
 ### Instalação Local
@@ -74,7 +74,7 @@ O sistema segue uma arquitetura modular baseada em camadas:
 
 Para que o radar funcione sozinho todos os dias:
 1.  Envie o código para o seu repositório GitHub.
-2.  Configure os **Actions Secrets** no painel do GitHub (`SUPABASE_URL`, `SUPABASE_KEY`, `GEMINI_API_KEY`, `DISCORD_WEBHOOK_URL`).
+2.  Configure os **Actions Secrets** no painel do GitHub (`SUPABASE_URL`, `SUPABASE_KEY`, `OPENROUTER_API_KEY`, `DISCORD_WEBHOOK_URL`).
 3.  O workflow em `.github/workflows/pipeline_diario.yml` cuidará do resto.
 
 > Confira o [Guia Detalhado do GitHub Actions](file:///C:/Users/hmnic/.gemini/antigravity/brain/42b7657d-0825-4b93-86b7-67922e9ee9fc/guia_github_actions.md) para mais detalhes.
@@ -87,7 +87,7 @@ Para que o radar funcione sozinho todos os dias:
 ├── .github/workflows/      # Agendamento diário (GitHub Actions)
 ├── src/
 │   ├── extractors/         # Scraping do PCI Concursos
-│   ├── transformers/       # Limpeza Pandas e Enriquecimento Gemini
+│   ├── transformers/       # Limpeza Pandas e Enriquecimento via OpenRouter
 │   ├── loaders/            # Upload Supabase e Notificação Discord
 │   ├── utils/              # Loggers e Geradores de Hash
 │   └── __init__.py
