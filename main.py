@@ -16,7 +16,7 @@ import sys
 from dotenv import load_dotenv
 
 from src.extractors import rss_concursos
-from src.transformers import filtros_pandas, openrouter_nlp as ai_nlp
+from src.transformers import filtros_pandas
 from src.loaders import supabase_client, discord_notifier
 from src.utils.logger_config import get_logger
 
@@ -78,11 +78,7 @@ def executar_pipeline(incluir_noticias: bool = False) -> None:
 
     logger.info(f"🆕 {len(df_novos)} edital(is) novo(s) para processar.")
 
-    # ── ETAPA 4: ENRIQUECIMENTO COM IA ────────────────────────────────────────
-    logger.info("🤖 [T] Enriquecimento: chamando OpenRouter para extração de entidades...")
-    df_novos = ai_nlp.enriquecer(df_novos)
-
-    # ── ETAPA 5: CARGA E NOTIFICAÇÃO ──────────────────────────────────────────
+    # ── ETAPA 4: CARGA E NOTIFICAÇÃO ──────────────────────────────────────────
     logger.info("💾 [L] Carga: persistindo no Supabase e notificando Discord...")
 
     for _, row in df_novos.iterrows():
@@ -93,12 +89,12 @@ def executar_pipeline(incluir_noticias: bool = False) -> None:
         # Prepara o payload para o Supabase (remove campos do DataFrame)
         payload_supabase = {
             "hash_identificador": hash_id,
-            "orgao_banca": edital.get("orgao_banca") or "Não identificado",
-            "cargo_principal": edital.get("cargo_principal"),
-            "remuneracao_maxima": edital.get("remuneracao_maxima"),
-            "data_prova": edital.get("data_prova"),
+            "titulo": edital.get("titulo"),
+            "instituicao": edital.get("instituicao"),
+            "informacoes": edital.get("informacoes"),
+            "escolaridade": edital.get("escolaridade"),
+            "inscricao_ate": edital.get("inscricao_ate"),
             "link_original": edital.get("link_original"),
-            "resumo_ia": edital.get("resumo_ia"),
             "notificado_discord": False,
         }
 

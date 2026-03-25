@@ -89,13 +89,13 @@ def processar(editais_brutos: list[dict]) -> pd.DataFrame:
     if "extraido_em" not in df.columns:
         df["extraido_em"] = datetime.utcnow().isoformat()
 
-    # ── Campos que serão preenchidos pelo gemini_nlp ────────────────────────
-    for campo in ["orgao_banca", "cargo_principal", "remuneracao_maxima",
-                  "data_prova", "resumo_ia"]:
+    # ── Campos extraídos diretamente do HTML ────────────────────────────────
+    for campo in ["instituicao", "informacoes", "escolaridade",
+                  "inscricao_ate"]:
         if campo not in df.columns:
             df[campo] = None
 
     df = df.where(pd.notnull(df), None)
     df = df.reset_index(drop=True)
-    logger.info(f"{len(df)} edital(is) prontos para enriquecimento com IA.")
+    logger.info(f"{len(df)} edital(is) prontos para carga.")
     return df

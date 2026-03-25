@@ -70,8 +70,8 @@ def inserir_edital(dados: dict) -> bool:
 
     Args:
         dados: Dicionário com os campos do edital. Campos esperados:
-               hash_identificador, orgao_banca, cargo_principal,
-               remuneracao_maxima, data_prova, link_original, resumo_ia.
+               hash_identificador, titulo, instituicao,
+               informacoes, escolaridade, inscricao_ate, link_original.
 
     Returns:
         True se inserção bem-sucedida, False caso contrário.

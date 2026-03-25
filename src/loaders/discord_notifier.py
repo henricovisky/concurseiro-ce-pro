@@ -68,37 +68,35 @@ def _construir_payload(edital: dict) -> dict:
         Payload formatado para a API do Discord.
     """
     titulo = edital.get("titulo", "Novo Edital")
-    orgao = edital.get("orgao_banca", "Não identificado")
-    cargo = edital.get("cargo_principal", "Não identificado")
-    remuneracao = _formatar_remuneracao(edital.get("remuneracao_maxima"))
-    data_prova = _formatar_data(edital.get("data_prova"))
+    instituicao = edital.get("instituicao", "Não identificado")
+    informacoes = edital.get("informacoes", "Não informado")
+    escolaridade = edital.get("escolaridade", "Não informada")
+    inscricao_ate = edital.get("inscricao_ate", "Não informado")
     link = edital.get("link_original", "")
-    resumo = edital.get("resumo_ia", "Sem resumo disponível.")
 
     embed = {
         "title": f"📋 {titulo[:250]}",  # Discord limita título em 256 chars
         "url": link,
         "color": 0x1E90FF,  # Azul dodger
-        "description": f"📝 {resumo}" if resumo else "",
         "fields": [
             {
-                "name": "🏛️ Órgão / Banca",
-                "value": orgao or "Não identificado",
+                "name": "🏛️ Instituição",
+                "value": instituicao or "Não identificado",
+                "inline": False,
+            },
+            {
+                "name": "ℹ️ Informações",
+                "value": informacoes or "Não informado",
+                "inline": False,
+            },
+            {
+                "name": "🎓 Escolaridade",
+                "value": escolaridade or "Não informada",
                 "inline": True,
             },
             {
-                "name": "💼 Cargo Principal",
-                "value": cargo or "Não identificado",
-                "inline": True,
-            },
-            {
-                "name": "💰 Remuneração Máx.",
-                "value": remuneracao,
-                "inline": True,
-            },
-            {
-                "name": "📅 Data da Prova",
-                "value": data_prova,
+                "name": "📅 Inscrição até",
+                "value": inscricao_ate or "Não informado",
                 "inline": True,
             },
             {
@@ -108,7 +106,7 @@ def _construir_payload(edital: dict) -> dict:
             },
         ],
         "footer": {
-            "text": "🤖 Concurseiro CE Pro • Radar de Editais",
+            "text": "🤖 Radar CE Pro",
         },
         "timestamp": datetime.utcnow().isoformat(),
     }

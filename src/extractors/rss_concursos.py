@@ -33,11 +33,7 @@ logger = get_logger(__name__)
 # ─── Configurações ────────────────────────────────────────────────────────────
 BASE_URL = "https://www.pciconcursos.com.br"
 
-# Fonte 1: página filtrada por estado (âncora #CE é tratada server-side pelo PCI)
 URL_CONCURSOS_CE = f"{BASE_URL}/concursos/#CE"
-
-# Fonte 2: página geral de notícias
-URL_NOTICIAS = f"{BASE_URL}/noticias/"
 
 REQUEST_TIMEOUT = 20  # segundos
 
@@ -51,13 +47,7 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
-# Palavras-chave para filtrar notícias relevantes ao Ceará
-KEYWORDS_CE = [
-    "ceará", " ce ", "-ce-", "/ce-", "fortaleza", "caucaia", "juazeiro",
-    "sobral", "crato", "maracanaú", "iguatu", "quixadá", "limoeiro do norte",
-    "pacatuba", "horizonte", "itapipoca", "russas", "cau/ce", "aracati",
-    "beberibe", "baturité",
-]
+# Foco apenas na extração estruturada (HTML)
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -116,12 +106,10 @@ def _extrair_editais_concursos_ce(html: str) -> list[dict]:
     logger.info(f"Blocos de concurso encontrados: {len(blocos)}")
 
     for bloco in blocos:
-        # Verifica se é do Ceará — o estado fica em div.cc
+        # Verifica se é do Ceará — o estado EXATO fica na div.cc
         estado_div = bloco.select_one("div.cc")
-        if estado_div:
-            estado = estado_div.get_text(strip=True).upper()
-            if "CE" not in estado:
-                continue
+        if not estado_div or estado_div.get_text(strip=True).upper() != "CE":
+            continue
 
         # Extrai o link principal (dentro de div.ca)
         link_tag = bloco.select_one("div.ca a")
@@ -132,7 +120,8 @@ def _extrair_editais_concursos_ce(html: str) -> list[dict]:
         if not link_tag:
             continue
 
-        titulo = link_tag.get("title") or link_tag.get_text(strip=True)
+        titulo = link_tag.get("title") or ""
+        instituicao = link_tag.get_text(strip=True)
         href = link_tag.get("href", "")
 
         if not titulo or not href:
@@ -142,17 +131,31 @@ def _extrair_editais_concursos_ce(html: str) -> list[dict]:
 
         # Extrai informações complementares de vagas/salário (div.cd)
         info_div = bloco.select_one("div.cd")
-        info_extra = info_div.get_text(strip=True) if info_div else ""
+        if info_div:
+            # Pegamos o primeiro nó de texto do div.cd para as informações principais
+            informacoes = info_div.find(text=True, recursive=False)
+            informacoes = informacoes.strip() if informacoes else ""
+            
+            # Pegamos a escolaridade do último span
+            spans = info_div.select("span")
+            escolaridade = spans[-1].get_text(strip=True) if spans else ""
+        else:
+            informacoes = ""
+            escolaridade = ""
 
         # Extrai prazo de inscrição (div.ce)
-        prazo_div = bloco.select_one("div.ce")
-        prazo = prazo_div.get_text(strip=True) if prazo_div else ""
+        prazo_div = bloco.select_one("div.ce span")
+        if not prazo_div:
+            prazo_div = bloco.select_one("div.ce")
+        inscricao_ate = prazo_div.get_text(strip=True) if prazo_div else ""
 
         editais.append({
             "titulo": titulo,
+            "instituicao": instituicao,
             "link_original": url_edital,
-            "info_extra": info_extra,
-            "prazo_inscricao": prazo,
+            "informacoes": informacoes,
+            "escolaridade": escolaridade,
+            "inscricao_ate": inscricao_ate,
             "estado": "CE",
             "fonte": URL_CONCURSOS_CE,
             "extraido_em": datetime.utcnow().isoformat(),
@@ -162,79 +165,7 @@ def _extrair_editais_concursos_ce(html: str) -> list[dict]:
     return editais
 
 
-def _extrair_noticias(html: str) -> list[dict]:
-    """
-    Extrai notícias da página /noticias/ do PCI Concursos.
-
-    Estrutura identificada via análise do browser:
-      - As notícias ficam em <ul class="noticias"> > <li> > <a>
-      - O título está no texto do link e/ou no atributo title
-      - Links seguem padrão /noticias/slug-da-noticia
-    """
-    soup = BeautifulSoup(html, "lxml")
-    noticias = []
-
-    # Seletor principal identificado na análise
-    links = soup.select("ul.noticias li a")
-
-    if not links:
-        # Fallback: links com classe "n" seguida de números (padrão do PCI)
-        links = soup.select("a[class^='n'][href*='/noticias/']")
-
-    if not links:
-        # Fallback 2: qualquer link que aponte para /noticias/
-        links = soup.select("a[href*='/noticias/']")
-
-    logger.info(f"{len(links)} link(s) de notícias encontrado(s).")
-
-    for link_tag in links:
-        titulo = link_tag.get("title") or link_tag.get_text(strip=True)
-        href = link_tag.get("href", "")
-
-        if not titulo or not href or len(titulo) < 10:
-            continue
-
-        # Ignora links internos de navegação (ex: /noticias/ sozinho)
-        if href.rstrip("/") == f"{BASE_URL}/noticias" or href == "/noticias/":
-            continue
-
-        url_noticia = href if href.startswith("http") else f"{BASE_URL}{href}"
-
-        noticias.append({
-            "titulo": titulo,
-            "link_original": url_noticia,
-            "fonte": URL_NOTICIAS,
-            "extraido_em": datetime.utcnow().isoformat(),
-        })
-
-    return noticias
-
-
-def _filtrar_por_ceara(editais: list[dict]) -> list[dict]:
-    """
-    Filtra a lista de itens para manter apenas os relevantes ao Ceará.
-    Verifica título e URL contra as palavras-chave definidas.
-
-    Args:
-        editais: Lista de dicionários com título e link.
-
-    Returns:
-        Lista filtrada com itens relacionados ao Ceará.
-    """
-    filtrados = []
-    for edital in editais:
-        texto = (
-            edital.get("titulo", "") + " " + edital.get("link_original", "")
-        ).lower()
-
-        if any(kw in texto for kw in KEYWORDS_CE):
-            filtrados.append(edital)
-
-    logger.info(
-        f"{len(filtrados)} item(ns) do Ceará após filtro "
-        f"(de {len(editais)} total)."
-    )
-    return filtrados
+# Funções _extrair_noticias e _filtrar_por_ceara removidas pós-refatoração estruturada.
 
 
 def _deduplicar(editais: list[dict]) -> list[dict]:
@@ -274,16 +205,8 @@ def extrair(incluir_noticias: bool = True) -> list[dict]:
     except Exception as e:
         logger.error(f"Falha ao extrair /concursos/#CE: {e}")
 
-    # ── Fonte 2: /noticias/ (filtrado por CE + nacionais) ────────────────────
-    if incluir_noticias:
-        try:
-            logger.info("Extraindo fonte 2: /noticias/")
-            html_noticias = _fetch_html(URL_NOTICIAS)
-            noticias = _extrair_noticias(html_noticias)
-            noticias_ce = _filtrar_por_ceara(noticias)
-            todos_editais.extend(noticias_ce)
-        except Exception as e:
-            logger.error(f"Falha ao extrair /noticias/: {e}")
+    # (A fonte 2 via `/noticias/` foi desativada pois não contém 
+    # a estrutura de campos rigorosos para o novo formato do Discord)
 
     # ── Deduplicação local ───────────────────────────────────────────────────
     unicos = _deduplicar(todos_editais)
