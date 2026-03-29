@@ -171,12 +171,16 @@ def notificar_resumo(total_novos: int, total_processados: int) -> None:
         total_novos: Quantidade de editais novos encontrados.
         total_processados: Total de editais analisados pelo pipeline.
     """
+    if total_novos == 0:
+        logger.info("Nenhum edital novo. Notificação de resumo ignorada.")
+        return
+
     try:
         webhook_url = _get_webhook_url()
     except EnvironmentError:
         return
 
-    emoji = "🟢" if total_novos > 0 else "🔵"
+    emoji = "🟢"
     mensagem = (
         f"{emoji} **Pipeline Concluído** — "
         f"`{total_novos}` edital(is) novo(s) de `{total_processados}` analisado(s)."

@@ -50,7 +50,6 @@ def executar_pipeline(incluir_noticias: bool = False) -> None:
 
     if not editais_brutos:
         logger.warning("Nenhum edital encontrado na extração. Pipeline encerrado.")
-        discord_notifier.notificar_resumo(0, 0)
         return
 
     total_processados = len(editais_brutos)
@@ -62,7 +61,6 @@ def executar_pipeline(incluir_noticias: bool = False) -> None:
 
     if df.empty:
         logger.warning("DataFrame vazio após transformação. Pipeline encerrado.")
-        discord_notifier.notificar_resumo(0, total_processados)
         return
 
     # ── ETAPA 3: VERIFICAR IDEMPOTÊNCIA ───────────────────────────────────────
@@ -73,7 +71,6 @@ def executar_pipeline(incluir_noticias: bool = False) -> None:
 
     if df_novos.empty:
         logger.info("✅ Sem novidades — todos os editais já foram processados.")
-        discord_notifier.notificar_resumo(0, total_processados)
         return
 
     logger.info(f"🆕 {len(df_novos)} edital(is) novo(s) para processar.")
